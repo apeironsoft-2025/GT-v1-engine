@@ -5,7 +5,7 @@ from typing import Any
 import pandas as pd
 import yaml
 
-from gt_v1.core.errors import ConfigError, FileMissingError
+from gt_v1_engine.core.errors import ConfigError, FileMissingError
 
 
 def ensure_file_exists(path: Path | str) -> Path:

@@ -1,4 +1,4 @@
-from gt_v1.core.pip_utils import infer_pip_size, resolve_pip_size
+from gt_v1_engine.core.pip_utils import infer_pip_size, resolve_pip_size
 
 
 def test_usdjpy_returns_jpy_pip_size() -> None:

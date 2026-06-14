@@ -4,8 +4,8 @@ from pathlib import Path
 import pytest
 import yaml
 
-from gt_v1.core.errors import RuleConfigError
-from gt_v1.rules.rule_config import load_rule171_config
+from gt_v1_engine.core.errors import RuleConfigError
+from gt_v1_engine.rules.rule_config import load_rule171_config
 
 
 def _write_config(tmp_path: Path, payload: dict) -> Path:

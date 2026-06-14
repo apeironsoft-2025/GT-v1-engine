@@ -1,6 +1,6 @@
 import pandas as pd
 
-from gt_v1.core.errors import DataValidationError
+from gt_v1_engine.core.errors import DataValidationError
 
 
 def parse_utc_datetime(value: str) -> pd.Timestamp:

@@ -1,25 +1,23 @@
 from pathlib import Path
-from typing import Optional
-
 import typer
 from rich.console import Console
 from rich.table import Table
 
-from gt_v1 import __version__
-from gt_v1.core.errors import GTV1Error
-from gt_v1.core.paths import resolve_project_path
-from gt_v1.data.market_data_loader import load_market_data
-from gt_v1.rules.rule_config import Rule171Config, load_rule171_config
+from gt_v1_engine import __version__
+from gt_v1_engine.core.errors import GTV1EngineError
+from gt_v1_engine.core.paths import resolve_project_path
+from gt_v1_engine.data.market_data_loader import load_market_data
+from gt_v1_engine.rules.rule_config import Rule171Config, load_rule171_config
 
-app = typer.Typer(help="GT-v1 research CLI.")
+app = typer.Typer(help="GT-v1-engine research CLI.")
 console = Console()
 
 
 def _handle_cli_error(exc: Exception, debug: bool) -> None:
-    if isinstance(exc, GTV1Error):
-        console.print(f"[bold red][GT-v1 ERROR][/bold red] {exc.__class__.__name__}: {exc}")
+    if isinstance(exc, GTV1EngineError):
+        console.print(f"[bold red][GT-v1-engine ERROR][/bold red] {exc.__class__.__name__}: {exc}")
         raise typer.Exit(code=1) from None
-    console.print(f"[bold red][GT-v1 ERROR][/bold red] Unexpected error: {exc}")
+    console.print(f"[bold red][GT-v1-engine ERROR][/bold red] Unexpected error: {exc}")
     if debug:
         raise
     raise typer.Exit(code=1) from None

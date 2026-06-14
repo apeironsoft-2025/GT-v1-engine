@@ -3,8 +3,8 @@ from pathlib import Path
 import pandas as pd
 import pytest
 
-from gt_v1.core.errors import DataValidationError, UnsupportedFormatError
-from gt_v1.data.market_data_loader import load_market_data
+from gt_v1_engine.core.errors import DataValidationError, UnsupportedFormatError
+from gt_v1_engine.data.market_data_loader import load_market_data
 
 
 def test_csv_with_standard_columns_loads(tmp_path: Path) -> None:

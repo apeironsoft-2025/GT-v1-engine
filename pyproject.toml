@@ -3,9 +3,9 @@ requires = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "gt-v1"
+name = "gt-v1-engine"
 version = "0.1.0"
-description = "Config-first Rule171 research foundation"
+description = "Config-first Rule171 engine research foundation"
 requires-python = ">=3.11"
 dependencies = [
   "pandas",
@@ -19,7 +19,7 @@ dependencies = [
 ]
 
 [project.scripts]
-gt-v1 = "gt_v1.cli:app"
+gt-v1-engine = "gt_v1_engine.cli:app"
 
 [tool.setuptools.packages.find]
 where = ["src"]

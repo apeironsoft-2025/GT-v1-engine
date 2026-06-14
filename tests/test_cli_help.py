@@ -4,7 +4,7 @@ import sys
 
 def _run_cli(*args: str) -> subprocess.CompletedProcess[str]:
     return subprocess.run(
-        [sys.executable, "-m", "gt_v1.cli", *args],
+        [sys.executable, "-m", "gt_v1_engine.cli", *args],
         check=False,
         capture_output=True,
         text=True,

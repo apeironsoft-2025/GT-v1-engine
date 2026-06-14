@@ -2,7 +2,7 @@ from collections.abc import Iterable
 
 import pandas as pd
 
-from gt_v1.core.errors import DataValidationError
+from gt_v1_engine.core.errors import DataValidationError
 
 
 def require_columns(df: pd.DataFrame, columns: Iterable[str], context: str) -> None:

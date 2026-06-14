@@ -3,9 +3,9 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator, model_validator
 
-from gt_v1.core.constants import NOT_ACTIVE, RULE171_NAME
-from gt_v1.core.errors import RuleConfigError
-from gt_v1.core.io_utils import read_yaml
+from gt_v1_engine.core.constants import NOT_ACTIVE, RULE171_NAME
+from gt_v1_engine.core.errors import RuleConfigError
+from gt_v1_engine.core.io_utils import read_yaml
 
 PatternToken = Literal["UP", "DOWN", "NO_SIGNAL"]
 
