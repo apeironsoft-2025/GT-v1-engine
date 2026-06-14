@@ -1,18 +1,25 @@
 from gt_v1_engine.core.errors import IndicatorRegistryError
-from gt_v1_engine.indicators.base import IndicatorMetadata
+from gt_v1_engine.indicators.adx import ADXIndicator
+from gt_v1_engine.indicators.atr import ATRIndicator
+from gt_v1_engine.indicators.base import BaseIndicator, IndicatorMetadata
+from gt_v1_engine.indicators.bollinger import BollingerIndicator
+from gt_v1_engine.indicators.ema_stack import EMAStackIndicator
+from gt_v1_engine.indicators.macd import MACDIndicator
+from gt_v1_engine.indicators.rsi import RSIIndicator
 
 _DEFAULT_INDICATOR_ORDER: list[str] = ["MACD", "RSI", "ADX", "ATR", "BOLLINGER", "EMA_STACK"]
 
+_INDICATOR_CLASSES: dict[str, type[BaseIndicator]] = {
+    "MACD": MACDIndicator,
+    "RSI": RSIIndicator,
+    "ADX": ADXIndicator,
+    "ATR": ATRIndicator,
+    "BOLLINGER": BollingerIndicator,
+    "EMA_STACK": EMAStackIndicator,
+}
+
 _REGISTERED_INDICATORS: dict[str, IndicatorMetadata] = {
-    name: IndicatorMetadata(
-        name=name,
-        direction_column=f"{name}_TD",
-        strength_column=f"{name}_TS",
-        enabled=True,
-        implemented=False,
-        description=f"{name} indicator placeholder for Step 03 implementation.",
-    )
-    for name in _DEFAULT_INDICATOR_ORDER
+    name: _INDICATOR_CLASSES[name]().metadata for name in _DEFAULT_INDICATOR_ORDER
 }
 
 
@@ -36,6 +43,18 @@ def get_indicator_metadata(name: str) -> IndicatorMetadata:
         return _REGISTERED_INDICATORS[normalized]
     except KeyError as exc:
         raise IndicatorRegistryError(f"Unknown indicator: {name}") from exc
+
+
+def create_indicator(name: str) -> BaseIndicator:
+    normalized = _normalize_indicator_name(name)
+    if normalized not in _REGISTERED_INDICATORS:
+        raise IndicatorRegistryError(f"Unknown indicator: {name}")
+    if not _REGISTERED_INDICATORS[normalized].implemented:
+        raise IndicatorRegistryError(f"Indicator implementation unavailable: {normalized}")
+    indicator_class = _INDICATOR_CLASSES.get(normalized)
+    if indicator_class is None:
+        raise IndicatorRegistryError(f"Indicator implementation unavailable: {normalized}")
+    return indicator_class()
 
 
 def is_registered_indicator(name: str) -> bool:
