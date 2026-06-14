@@ -24,3 +24,15 @@ class RuleConfigError(GTV1EngineError):
 
 class CliArgumentError(GTV1EngineError):
     """Raised when CLI arguments are invalid."""
+
+
+class IndicatorRegistryError(GTV1EngineError):
+    """Raised when indicator registry lookup or validation fails."""
+
+
+class IndicatorCalculationError(GTV1EngineError):
+    """Raised when indicator calculation fails."""
+
+
+class IndicatorSelectionError(GTV1EngineError):
+    """Raised when indicator selection configuration is invalid."""

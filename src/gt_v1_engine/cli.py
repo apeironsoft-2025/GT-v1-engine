@@ -7,6 +7,8 @@ from gt_v1_engine import __version__
 from gt_v1_engine.core.errors import GTV1EngineError
 from gt_v1_engine.core.paths import resolve_project_path
 from gt_v1_engine.data.market_data_loader import load_market_data
+from gt_v1_engine.indicators.registry import get_registered_indicators, validate_indicator_order
+from gt_v1_engine.indicators.selection import load_default_indicator_config
 from gt_v1_engine.rules.rule_config import Rule171Config, load_rule171_config
 
 app = typer.Typer(help="GT-v1-engine research CLI.")
@@ -14,6 +16,8 @@ console = Console()
 
 
 def _handle_cli_error(exc: Exception, debug: bool) -> None:
+    if debug:
+        raise exc
     if isinstance(exc, GTV1EngineError):
         console.print(f"[bold red][GT-v1-engine ERROR][/bold red] {exc.__class__.__name__}: {exc}")
         raise typer.Exit(code=1) from None
@@ -92,6 +96,64 @@ def show_defaults(
     try:
         rule_config = load_rule171_config(_resolve(config))
         _print_config_summary(rule_config)
+    except Exception as exc:
+        _handle_cli_error(exc, debug)
+
+
+@app.command("list-indicators")
+def list_indicators(
+    debug: bool = typer.Option(False, "--debug", help="Show traceback for errors."),
+) -> None:
+    """List registered indicators and framework status."""
+    try:
+        table = Table(title="Registered Indicators")
+        table.add_column("Indicator")
+        table.add_column("TD column")
+        table.add_column("TS column")
+        table.add_column("implemented")
+        table.add_column("enabled")
+
+        for metadata in get_registered_indicators().values():
+            table.add_row(
+                metadata.name,
+                metadata.direction_column,
+                metadata.strength_column,
+                str(metadata.implemented).lower(),
+                str(metadata.enabled).lower(),
+            )
+        console.print(table)
+    except Exception as exc:
+        _handle_cli_error(exc, debug)
+
+
+@app.command("validate-indicators-config")
+def validate_indicators_config(
+    config: Path = typer.Option(
+        Path("configs/indicators/default_indicators.yaml"),
+        "--config",
+        help="Path to indicator YAML config.",
+    ),
+    debug: bool = typer.Option(False, "--debug", help="Show traceback for errors."),
+) -> None:
+    """Validate indicator defaults and enabled indicator order."""
+    try:
+        indicator_config = load_default_indicator_config(_resolve(config))
+        default_order = validate_indicator_order(
+            indicator_config["default_order"],
+            indicator_config["default_order"],
+        )
+        enabled = validate_indicator_order(
+            indicator_config["enabled"],
+            indicator_config["default_order"],
+        )
+
+        console.print("[bold green]Indicator config validation passed.[/bold green]")
+        table = Table(title="Indicator Config")
+        table.add_column("Field")
+        table.add_column("Value")
+        table.add_row("default order", ", ".join(default_order))
+        table.add_row("enabled", ", ".join(enabled))
+        console.print(table)
     except Exception as exc:
         _handle_cli_error(exc, debug)
 
