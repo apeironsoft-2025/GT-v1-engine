@@ -1,0 +1,8 @@
+pandas
+numpy
+pyarrow
+pydantic
+typer
+rich
+pyyaml
+pytest

@@ -1,0 +1,77 @@
+rule_name: Rule171
+production_activation_status: NOT_ACTIVE
+
+market:
+  default_pair: USDJPY
+  default_timeframe: M5
+  default_start: "2025-12-01T00:00:00+00:00"
+  default_end: "2026-05-22T20:50:00+00:00"
+
+data:
+  datetime_column: DateTime
+  entry_price_column: SRP
+  ohlc_columns:
+    open: Open
+    high: High
+    low: Low
+    close: Close
+
+pip_size:
+  jpy_pair: 0.01
+  non_jpy_pair: 0.0001
+  override: null
+
+indicators:
+  selected:
+    - MACD
+    - RSI
+    - ADX
+    - ATR
+    - BOLLINGER
+    - EMA_STACK
+  order:
+    - MACD
+    - RSI
+    - ADX
+    - ATR
+    - BOLLINGER
+    - EMA_STACK
+
+entry:
+  strength_threshold: 4.5
+  entry_confirmation_required: 3
+  entry_opens_on_confirmation_number: 3
+  preserve_cycle_on_no_signal: true
+  reset_cycle_on_opposite_signal: true
+
+patterns:
+  BUY:
+    - UP|UP|UP|UP|UP|UP
+  SELL:
+    - DOWN|DOWN|DOWN|DOWN|DOWN|DOWN
+    - DOWN|DOWN|DOWN|UP|DOWN|DOWN
+    - UP|DOWN|DOWN|DOWN|DOWN|DOWN
+
+trade_management:
+  only_one_trade_open: true
+  blocked_rows_are_not_skipped: true
+  take_profit_pips: 30
+  stop_loss_pips: 40
+  max_holding_candles: 144
+  allow_close_after_end: false
+  both_hit_same_candle_result: LOSS_CLOSE
+  time_limit_win_condition: realized_pips_gt_zero
+
+outputs:
+  write_csv: true
+  write_summary_json: true
+  write_markdown_report: true
+  include_indicator_columns: true
+  include_entry_confirmation_audit: true
+  include_blocked_rows_count: true
+
+safety:
+  research_only: true
+  live_trading_allowed: false
+  broker_order_allowed: false
+  production_activation_status: NOT_ACTIVE
