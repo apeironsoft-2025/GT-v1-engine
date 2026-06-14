@@ -62,3 +62,7 @@ def test_backtest_rule171_help_exits_zero() -> None:
 
 def test_run_smoke_pipeline_help_exits_zero() -> None:
     assert _run_cli("run-smoke-pipeline", "--help").returncode == 0
+
+
+def test_compare_rule171_baseline_help_exits_zero() -> None:
+    assert _run_cli("compare-rule171-baseline", "--help").returncode == 0

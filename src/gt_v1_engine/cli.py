@@ -1,14 +1,20 @@
+import json
 from pathlib import Path
 import typer
 from rich.console import Console
 from rich.table import Table
 
 from gt_v1_engine import __version__
+from gt_v1_engine.baselines.comparison import (
+    compare_rule171_summary_to_baseline,
+    write_rule171_baseline_comparison_report,
+)
 from gt_v1_engine.backtesting.indicator_backtester import (
     backtest_all_indicators,
     backtest_indicator,
 )
-from gt_v1_engine.core.errors import GTV1EngineError
+from gt_v1_engine.core.errors import ConfigError, GTV1EngineError
+from gt_v1_engine.core.io_utils import ensure_file_exists, write_json
 from gt_v1_engine.core.paths import resolve_project_path
 from gt_v1_engine.data.market_data_loader import load_market_data
 from gt_v1_engine.indicators.executor import run_indicator_executor
@@ -534,6 +540,70 @@ def _print_smoke_pipeline_summary(summary: dict) -> None:
     table.add_row("Rule171 released signals", str(summary.get("rule171_released_signals", "")))
     table.add_row("Rule171 net pips", str(summary.get("rule171_total_realized_pips", "")))
     table.add_row("validation status", summary["validation_status"])
+    console.print(table)
+
+
+@app.command("compare-rule171-baseline")
+def compare_rule171_baseline_command(
+    summary_json: Path = typer.Option(..., "--summary-json", help="Rule171 summary JSON path."),
+    output_report: Path = typer.Option(..., "--output-report", help="Markdown comparison report path."),
+    output_json: Path | None = typer.Option(None, "--output-json", help="Optional comparison JSON path."),
+    tolerance_pips: float = typer.Option(0.1, "--tolerance-pips", help="Pip metric tolerance."),
+    tolerance_rate: float = typer.Option(0.01, "--tolerance-rate", help="Rate metric tolerance."),
+    tolerance_count: int = typer.Option(0, "--tolerance-count", help="Count metric tolerance."),
+    debug: bool = typer.Option(False, "--debug", help="Show traceback for errors."),
+) -> None:
+    """Compare a Rule171 summary JSON with the old baseline metrics."""
+    try:
+        current_summary = _read_json(_resolve(summary_json))
+        comparison = compare_rule171_summary_to_baseline(
+            current_summary,
+            tolerance_pips=tolerance_pips,
+            tolerance_rate=tolerance_rate,
+            tolerance_count=tolerance_count,
+        )
+        resolved_report = _resolve(output_report)
+        write_rule171_baseline_comparison_report(comparison, current_summary, resolved_report)
+        resolved_output_json = _resolve(output_json) if output_json else None
+        if resolved_output_json is not None:
+            write_json(resolved_output_json, comparison)
+        _print_rule171_baseline_comparison_summary(comparison, resolved_report, resolved_output_json)
+    except Exception as exc:
+        _handle_cli_error(exc, debug)
+
+
+def _read_json(path: Path) -> dict:
+    resolved = ensure_file_exists(path)
+    try:
+        with resolved.open("r", encoding="utf-8-sig") as file:
+            payload = json.load(file)
+    except json.JSONDecodeError as exc:
+        raise ConfigError(f"Invalid JSON in {resolved}: {exc}") from exc
+    if not isinstance(payload, dict):
+        raise ConfigError(f"{resolved} must contain a JSON object")
+    return payload
+
+
+def _print_rule171_baseline_comparison_summary(
+    comparison: dict,
+    output_report: Path,
+    output_json: Path | None,
+) -> None:
+    table = Table(title="Rule171 Baseline Comparison")
+    table.add_column("Field")
+    table.add_column("Value")
+    table.add_row("comparison status", comparison["validation_status"])
+    table.add_row("exact match", str(comparison["exact_match"]).lower())
+    table.add_row("tolerance match", str(comparison["tolerance_match"]).lower())
+    largest = ", ".join(
+        f"{item['metric']}={item['absolute_difference']}"
+        for item in comparison["largest_differences"]
+    )
+    table.add_row("largest differences", largest)
+    table.add_row("report path", str(output_report))
+    if output_json is not None:
+        table.add_row("output JSON", str(output_json))
+    table.add_row("recommended next action", comparison["recommended_next_action"])
     console.print(table)
 
 
