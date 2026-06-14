@@ -1,0 +1,15 @@
+default_order:
+  - MACD
+  - RSI
+  - ADX
+  - ATR
+  - BOLLINGER
+  - EMA_STACK
+
+enabled:
+  - MACD
+  - RSI
+  - ADX
+  - ATR
+  - BOLLINGER
+  - EMA_STACK
