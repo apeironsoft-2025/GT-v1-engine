@@ -42,3 +42,15 @@ def test_list_indicators_help_exits_zero() -> None:
 
 def test_validate_indicators_config_help_exits_zero() -> None:
     assert _run_cli("validate-indicators-config", "--help").returncode == 0
+
+
+def test_run_indicators_help_exits_zero() -> None:
+    assert _run_cli("run-indicators", "--help").returncode == 0
+
+
+def test_backtest_indicator_help_exits_zero() -> None:
+    assert _run_cli("backtest-indicator", "--help").returncode == 0
+
+
+def test_backtest_all_indicators_help_exits_zero() -> None:
+    assert _run_cli("backtest-all-indicators", "--help").returncode == 0

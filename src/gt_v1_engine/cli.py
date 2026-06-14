@@ -4,11 +4,16 @@ from rich.console import Console
 from rich.table import Table
 
 from gt_v1_engine import __version__
+from gt_v1_engine.backtesting.indicator_backtester import (
+    backtest_all_indicators,
+    backtest_indicator,
+)
 from gt_v1_engine.core.errors import GTV1EngineError
 from gt_v1_engine.core.paths import resolve_project_path
 from gt_v1_engine.data.market_data_loader import load_market_data
+from gt_v1_engine.indicators.executor import run_indicator_executor
 from gt_v1_engine.indicators.registry import get_registered_indicators, validate_indicator_order
-from gt_v1_engine.indicators.selection import load_default_indicator_config
+from gt_v1_engine.indicators.selection import load_default_indicator_config, parse_indicator_list
 from gt_v1_engine.rules.rule_config import Rule171Config, load_rule171_config
 
 app = typer.Typer(help="GT-v1-engine research CLI.")
@@ -156,6 +161,185 @@ def validate_indicators_config(
         console.print(table)
     except Exception as exc:
         _handle_cli_error(exc, debug)
+
+
+@app.command("run-indicators")
+def run_indicators(
+    input_path: Path = typer.Option(..., "--input", help="Path to CSV or parquet market data."),
+    pair: str = typer.Option(..., "--pair", help="Market pair."),
+    timeframe: str = typer.Option(..., "--timeframe", help="Market timeframe."),
+    indicators: str | None = typer.Option(
+        None,
+        "--indicators",
+        help="Comma-separated indicators. Defaults to registry order.",
+    ),
+    output_csv: Path = typer.Option(..., "--output-csv", help="Output CSV path."),
+    output_parquet: Path | None = typer.Option(None, "--output-parquet", help="Output parquet path."),
+    summary_json: Path | None = typer.Option(None, "--summary-json", help="Summary JSON path."),
+    debug: bool = typer.Option(False, "--debug", help="Show traceback for errors."),
+) -> None:
+    """Run selected indicators over market data and write research output."""
+    try:
+        selected_indicators = parse_indicator_list(indicators)
+        _, summary = run_indicator_executor(
+            input_path=_resolve(input_path),
+            pair=pair,
+            timeframe=timeframe,
+            indicators=selected_indicators,
+            output_csv=_resolve(output_csv),
+            output_parquet=_resolve(output_parquet) if output_parquet else None,
+            summary_json=_resolve(summary_json) if summary_json else None,
+        )
+        _print_indicator_execution_summary(
+            summary,
+            _resolve(summary_json) if summary_json else None,
+        )
+    except Exception as exc:
+        _handle_cli_error(exc, debug)
+
+
+def _print_indicator_execution_summary(summary: dict, summary_json: Path | None) -> None:
+    table = Table(title="Indicator Execution")
+    table.add_column("Field")
+    table.add_column("Value")
+    table.add_row("pair", summary["pair"])
+    table.add_row("timeframe", summary["timeframe"])
+    table.add_row("row count", str(summary["row_count"]))
+    table.add_row("selected indicators", ", ".join(summary["selected_indicators"]))
+    table.add_row("output CSV", str(summary["output_csv_path"]))
+    if summary.get("output_parquet_path"):
+        table.add_row("output Parquet", str(summary["output_parquet_path"]))
+    if summary_json is not None:
+        table.add_row("summary JSON", str(summary_json))
+    table.add_row("validation status", summary["validation_status"])
+    console.print(table)
+
+
+@app.command("backtest-indicator")
+def backtest_indicator_command(
+    input_path: Path = typer.Option(..., "--input", help="Path to indicator-ready CSV or parquet."),
+    pair: str = typer.Option(..., "--pair", help="Market pair."),
+    timeframe: str = typer.Option(..., "--timeframe", help="Market timeframe."),
+    indicator: str = typer.Option(..., "--indicator", help="Indicator name."),
+    start: str | None = typer.Option(None, "--start", help="Inclusive start datetime."),
+    end: str | None = typer.Option(None, "--end", help="Inclusive end datetime."),
+    horizon_candles: int = typer.Option(48, "--horizon-candles", help="Future candle horizon."),
+    target_pips: float = typer.Option(30, "--target-pips", help="Take-profit distance in pips."),
+    stop_pips: float = typer.Option(40, "--stop-pips", help="Stop-loss distance in pips."),
+    pip_size: float | None = typer.Option(None, "--pip-size", help="Override pip size."),
+    output_csv: Path = typer.Option(..., "--output-csv", help="Backtest output CSV path."),
+    include_no_signal_rows: bool = typer.Option(
+        False,
+        "--include-no-signal-rows",
+        help="Include NO_SIGNAL rows in output.",
+    ),
+    debug: bool = typer.Option(False, "--debug", help="Show traceback for errors."),
+) -> None:
+    """Backtest one indicator using High/Low TP/SL touch logic."""
+    try:
+        _, summary = backtest_indicator(
+            input_path=_resolve(input_path),
+            pair=pair,
+            timeframe=timeframe,
+            indicator=indicator,
+            start=start,
+            end=end,
+            horizon_candles=horizon_candles,
+            target_pips=target_pips,
+            stop_pips=stop_pips,
+            pip_size=pip_size,
+            output_csv=_resolve(output_csv),
+            include_no_signal_rows=include_no_signal_rows,
+        )
+        _print_backtest_indicator_summary(summary)
+    except Exception as exc:
+        _handle_cli_error(exc, debug)
+
+
+@app.command("backtest-all-indicators")
+def backtest_all_indicators_command(
+    input_path: Path = typer.Option(..., "--input", help="Path to indicator-ready CSV or parquet."),
+    pair: str = typer.Option(..., "--pair", help="Market pair."),
+    timeframe: str = typer.Option(..., "--timeframe", help="Market timeframe."),
+    indicators: str | None = typer.Option(
+        None,
+        "--indicators",
+        help="Comma-separated indicators. Defaults to registry order.",
+    ),
+    start: str | None = typer.Option(None, "--start", help="Inclusive start datetime."),
+    end: str | None = typer.Option(None, "--end", help="Inclusive end datetime."),
+    horizon_candles: int = typer.Option(48, "--horizon-candles", help="Future candle horizon."),
+    target_pips: float = typer.Option(30, "--target-pips", help="Take-profit distance in pips."),
+    stop_pips: float = typer.Option(40, "--stop-pips", help="Stop-loss distance in pips."),
+    pip_size: float | None = typer.Option(None, "--pip-size", help="Override pip size."),
+    output_dir: Path = typer.Option(..., "--output-dir", help="Directory for per-indicator CSVs."),
+    summary_json: Path = typer.Option(..., "--summary-json", help="Combined summary JSON path."),
+    include_no_signal_rows: bool = typer.Option(
+        False,
+        "--include-no-signal-rows",
+        help="Include NO_SIGNAL rows in output.",
+    ),
+    debug: bool = typer.Option(False, "--debug", help="Show traceback for errors."),
+) -> None:
+    """Backtest selected indicators and write one CSV per indicator."""
+    try:
+        selected_indicators = parse_indicator_list(indicators)
+        summary = backtest_all_indicators(
+            input_path=_resolve(input_path),
+            pair=pair,
+            timeframe=timeframe,
+            indicators=selected_indicators,
+            start=start,
+            end=end,
+            horizon_candles=horizon_candles,
+            target_pips=target_pips,
+            stop_pips=stop_pips,
+            pip_size=pip_size,
+            output_dir=_resolve(output_dir),
+            summary_json=_resolve(summary_json),
+            include_no_signal_rows=include_no_signal_rows,
+        )
+        _print_backtest_all_summary(summary, _resolve(summary_json))
+    except Exception as exc:
+        _handle_cli_error(exc, debug)
+
+
+def _print_backtest_indicator_summary(summary: dict) -> None:
+    table = Table(title="Indicator Backtest")
+    table.add_column("Field")
+    table.add_column("Value")
+    table.add_row("pair", summary["pair"])
+    table.add_row("timeframe", summary["timeframe"])
+    table.add_row("indicator", summary["indicator"])
+    table.add_row("tested trades", str(summary["tested_trades"]))
+    table.add_row("wins", str(summary["win_count"]))
+    table.add_row("losses", str(summary["loss_count"]))
+    table.add_row("no hits", str(summary["no_hit_count"]))
+    table.add_row("total realized pips", str(summary["total_realized_pips"]))
+    table.add_row("output CSV", summary["output_csv_path"])
+    table.add_row("validation status", summary["validation_status"])
+    console.print(table)
+
+
+def _print_backtest_all_summary(summary: dict, summary_json: Path) -> None:
+    table = Table(title="All Indicator Backtests")
+    table.add_column("Field")
+    table.add_column("Value")
+    totals = summary["indicator_summaries"].values()
+    table.add_row("pair", summary["pair"])
+    table.add_row("timeframe", summary["timeframe"])
+    table.add_row("selected indicators", ", ".join(summary["selected_indicators"]))
+    table.add_row("tested trades", str(sum(item["tested_trades"] for item in totals)))
+    table.add_row("wins", str(sum(item["win_count"] for item in summary["indicator_summaries"].values())))
+    table.add_row("losses", str(sum(item["loss_count"] for item in summary["indicator_summaries"].values())))
+    table.add_row("no hits", str(sum(item["no_hit_count"] for item in summary["indicator_summaries"].values())))
+    table.add_row(
+        "total realized pips",
+        str(sum(item["total_realized_pips"] for item in summary["indicator_summaries"].values())),
+    )
+    table.add_row("summary JSON", str(summary_json))
+    table.add_row("validation status", summary["validation_status"])
+    console.print(table)
 
 
 def _print_config_summary(rule_config: Rule171Config) -> None:

@@ -42,4 +42,5 @@ def load_market_data(input_path: Path) -> pd.DataFrame:
     df = df.drop_duplicates(subset=["DateTime"], keep="last")
 
     require_columns(df, STANDARD_MARKET_COLUMNS, f"Market data {resolved}")
-    return df[STANDARD_MARKET_COLUMNS].reset_index(drop=True)
+    extra_columns = [column for column in df.columns if column not in STANDARD_MARKET_COLUMNS]
+    return df[[*STANDARD_MARKET_COLUMNS, *extra_columns]].reset_index(drop=True)
