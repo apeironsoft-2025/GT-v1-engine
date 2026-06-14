@@ -58,3 +58,7 @@ def test_backtest_all_indicators_help_exits_zero() -> None:
 
 def test_backtest_rule171_help_exits_zero() -> None:
     assert _run_cli("backtest-rule171", "--help").returncode == 0
+
+
+def test_run_smoke_pipeline_help_exits_zero() -> None:
+    assert _run_cli("run-smoke-pipeline", "--help").returncode == 0

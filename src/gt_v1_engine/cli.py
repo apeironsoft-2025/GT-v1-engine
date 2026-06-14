@@ -14,6 +14,7 @@ from gt_v1_engine.data.market_data_loader import load_market_data
 from gt_v1_engine.indicators.executor import run_indicator_executor
 from gt_v1_engine.indicators.registry import get_registered_indicators, validate_indicator_order
 from gt_v1_engine.indicators.selection import load_default_indicator_config, parse_indicator_list
+from gt_v1_engine.pipeline.smoke_pipeline import run_smoke_pipeline
 from gt_v1_engine.rules.rule171 import Rule171ExecutionOverrides, run_rule171_backtest
 from gt_v1_engine.rules.rule_config import Rule171Config, load_rule171_config
 
@@ -430,6 +431,108 @@ def _print_rule171_summary(summary: dict) -> None:
     table.add_row("blocked rows", str(summary["blocked_rows_while_open"]))
     table.add_row("output CSV", summary["output_csv_path"])
     table.add_row("output summary", summary["output_summary_path"])
+    table.add_row("validation status", summary["validation_status"])
+    console.print(table)
+
+
+@app.command("run-smoke-pipeline")
+def run_smoke_pipeline_command(
+    input_path: Path = typer.Option(..., "--input", help="Path to raw OHLC CSV or parquet."),
+    pair: str = typer.Option(..., "--pair", help="Market pair."),
+    timeframe: str = typer.Option(..., "--timeframe", help="Market timeframe."),
+    start: str | None = typer.Option(None, "--start", help="Inclusive start datetime."),
+    end: str | None = typer.Option(None, "--end", help="Inclusive end datetime."),
+    indicators: str | None = typer.Option(
+        "MACD,RSI,ADX,ATR,BOLLINGER,EMA_STACK",
+        "--indicators",
+        help="Comma-separated indicators.",
+    ),
+    config: Path = typer.Option(
+        Path("configs/rules/rule171.yaml"),
+        "--config",
+        help="Path to Rule171 YAML config.",
+    ),
+    output_root: Path = typer.Option(Path("data"), "--output-root", help="Output root directory."),
+    horizon_candles: int = typer.Option(48, "--horizon-candles", help="Indicator backtest horizon."),
+    indicator_target_pips: float = typer.Option(
+        30,
+        "--indicator-target-pips",
+        help="Indicator backtest take-profit pips.",
+    ),
+    indicator_stop_pips: float = typer.Option(
+        40,
+        "--indicator-stop-pips",
+        help="Indicator backtest stop-loss pips.",
+    ),
+    rule171_pip_size: float | None = typer.Option(None, "--rule171-pip-size", help="Rule171 pip size."),
+    rule171_strength_threshold: float | None = typer.Option(
+        None,
+        "--rule171-strength-threshold",
+        help="Rule171 strength threshold.",
+    ),
+    rule171_entry_confirmation_required: int | None = typer.Option(
+        None,
+        "--rule171-entry-confirmation-required",
+        help="Rule171 confirmation count.",
+    ),
+    rule171_take_profit_pips: float | None = typer.Option(
+        None,
+        "--rule171-take-profit-pips",
+        help="Rule171 take-profit pips.",
+    ),
+    rule171_stop_loss_pips: float | None = typer.Option(
+        None,
+        "--rule171-stop-loss-pips",
+        help="Rule171 stop-loss pips.",
+    ),
+    rule171_max_holding_candles: int | None = typer.Option(
+        None,
+        "--rule171-max-holding-candles",
+        help="Rule171 max holding candles.",
+    ),
+    debug: bool = typer.Option(False, "--debug", help="Show traceback for errors."),
+) -> None:
+    """Run the full research smoke pipeline and write a validation report."""
+    try:
+        selected_indicators = parse_indicator_list(indicators)
+        summary = run_smoke_pipeline(
+            input_path=_resolve(input_path),
+            pair=pair,
+            timeframe=timeframe,
+            start=start,
+            end=end,
+            indicators=selected_indicators,
+            config_path=_resolve(config),
+            output_root=_resolve(output_root),
+            horizon_candles=horizon_candles,
+            indicator_target_pips=indicator_target_pips,
+            indicator_stop_pips=indicator_stop_pips,
+            rule171_pip_size=rule171_pip_size,
+            rule171_strength_threshold=rule171_strength_threshold,
+            rule171_entry_confirmation_required=rule171_entry_confirmation_required,
+            rule171_take_profit_pips=rule171_take_profit_pips,
+            rule171_stop_loss_pips=rule171_stop_loss_pips,
+            rule171_max_holding_candles=rule171_max_holding_candles,
+        )
+        _print_smoke_pipeline_summary(summary)
+    except Exception as exc:
+        _handle_cli_error(exc, debug)
+
+
+def _print_smoke_pipeline_summary(summary: dict) -> None:
+    table = Table(title="Smoke Pipeline")
+    table.add_column("Field")
+    table.add_column("Value")
+    table.add_row("pipeline status", summary["validation_status"])
+    table.add_row("pair/timeframe", f"{summary['pair']} {summary['timeframe']}")
+    table.add_row("selected indicators", ", ".join(summary["selected_indicators"]))
+    table.add_row("indicator CSV", summary["indicator_dataset_csv"])
+    table.add_row("all-indicator summary JSON", summary["indicator_backtest_summary_json"])
+    table.add_row("Rule171 CSV", summary["rule171_output_csv"])
+    table.add_row("Rule171 summary JSON", summary["rule171_summary_json"])
+    table.add_row("report path", summary["markdown_report_path"])
+    table.add_row("Rule171 released signals", str(summary.get("rule171_released_signals", "")))
+    table.add_row("Rule171 net pips", str(summary.get("rule171_total_realized_pips", "")))
     table.add_row("validation status", summary["validation_status"])
     console.print(table)
 
