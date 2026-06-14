@@ -54,3 +54,7 @@ def test_backtest_indicator_help_exits_zero() -> None:
 
 def test_backtest_all_indicators_help_exits_zero() -> None:
     assert _run_cli("backtest-all-indicators", "--help").returncode == 0
+
+
+def test_backtest_rule171_help_exits_zero() -> None:
+    assert _run_cli("backtest-rule171", "--help").returncode == 0

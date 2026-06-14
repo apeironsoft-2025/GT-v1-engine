@@ -14,6 +14,7 @@ from gt_v1_engine.data.market_data_loader import load_market_data
 from gt_v1_engine.indicators.executor import run_indicator_executor
 from gt_v1_engine.indicators.registry import get_registered_indicators, validate_indicator_order
 from gt_v1_engine.indicators.selection import load_default_indicator_config, parse_indicator_list
+from gt_v1_engine.rules.rule171 import Rule171ExecutionOverrides, run_rule171_backtest
 from gt_v1_engine.rules.rule_config import Rule171Config, load_rule171_config
 
 app = typer.Typer(help="GT-v1-engine research CLI.")
@@ -338,6 +339,97 @@ def _print_backtest_all_summary(summary: dict, summary_json: Path) -> None:
         str(sum(item["total_realized_pips"] for item in summary["indicator_summaries"].values())),
     )
     table.add_row("summary JSON", str(summary_json))
+    table.add_row("validation status", summary["validation_status"])
+    console.print(table)
+
+
+@app.command("backtest-rule171")
+def backtest_rule171_command(
+    input_path: Path = typer.Option(..., "--input", help="Path to indicator-ready CSV or parquet."),
+    config: Path = typer.Option(
+        Path("configs/rules/rule171.yaml"),
+        "--config",
+        help="Path to Rule171 YAML config.",
+    ),
+    pair: str | None = typer.Option(None, "--pair", help="Market pair override."),
+    timeframe: str | None = typer.Option(None, "--timeframe", help="Market timeframe override."),
+    indicators: str | None = typer.Option(None, "--indicators", help="Comma-separated indicators."),
+    start: str | None = typer.Option(None, "--start", help="Inclusive start datetime override."),
+    end: str | None = typer.Option(None, "--end", help="Inclusive end datetime override."),
+    pip_size: float | None = typer.Option(None, "--pip-size", help="Pip size override."),
+    strength_threshold: float | None = typer.Option(
+        None,
+        "--strength-threshold",
+        help="Strength threshold override.",
+    ),
+    entry_confirmation_required: int | None = typer.Option(
+        None,
+        "--entry-confirmation-required",
+        help="Confirmation count override.",
+    ),
+    take_profit_pips: float | None = typer.Option(
+        None,
+        "--take-profit-pips",
+        help="Take-profit pips override.",
+    ),
+    stop_loss_pips: float | None = typer.Option(
+        None,
+        "--stop-loss-pips",
+        help="Stop-loss pips override.",
+    ),
+    max_holding_candles: int | None = typer.Option(
+        None,
+        "--max-holding-candles",
+        help="Max holding candles override.",
+    ),
+    output_csv: Path = typer.Option(..., "--output-csv", help="Rule171 output CSV path."),
+    output_summary: Path = typer.Option(..., "--output-summary", help="Rule171 summary JSON path."),
+    debug: bool = typer.Option(False, "--debug", help="Show traceback for errors."),
+) -> None:
+    """Backtest Rule171 over an indicator-ready dataset."""
+    try:
+        selected_indicators = parse_indicator_list(indicators) if indicators is not None else None
+        _, summary = run_rule171_backtest(
+            input_path=_resolve(input_path),
+            config_path=_resolve(config),
+            output_csv=_resolve(output_csv),
+            output_summary=_resolve(output_summary),
+            overrides=Rule171ExecutionOverrides(
+                pair=pair,
+                timeframe=timeframe,
+                indicators=selected_indicators,
+                start=start,
+                end=end,
+                pip_size=pip_size,
+                strength_threshold=strength_threshold,
+                entry_confirmation_required=entry_confirmation_required,
+                take_profit_pips=take_profit_pips,
+                stop_loss_pips=stop_loss_pips,
+                max_holding_candles=max_holding_candles,
+            ),
+        )
+        _print_rule171_summary(summary)
+    except Exception as exc:
+        _handle_cli_error(exc, debug)
+
+
+def _print_rule171_summary(summary: dict) -> None:
+    table = Table(title="Rule171 Backtest")
+    table.add_column("Field")
+    table.add_column("Value")
+    table.add_row("rule name", summary["rule_name"])
+    table.add_row("pair", summary["pair"])
+    table.add_row("timeframe", summary["timeframe"])
+    table.add_row("selected indicators", ", ".join(summary["selected_indicators"]))
+    table.add_row("period", f"{summary['start_datetime']} to {summary['end_datetime']}")
+    table.add_row("released signals", str(summary["released_signals"]))
+    table.add_row("wins", str(summary["win_close_count"]))
+    table.add_row("losses", str(summary["loss_close_count"]))
+    table.add_row("net pips", str(summary["total_realized_pips"]))
+    table.add_row("win rate", str(summary["win_close_rate"]))
+    table.add_row("blocked rows", str(summary["blocked_rows_while_open"]))
+    table.add_row("output CSV", summary["output_csv_path"])
+    table.add_row("output summary", summary["output_summary_path"])
     table.add_row("validation status", summary["validation_status"])
     console.print(table)
 
