@@ -13,6 +13,7 @@ from gt_v1_engine.backtesting.indicator_backtester import (
     backtest_all_indicators,
     backtest_indicator,
 )
+from gt_v1_engine.cleaned_csv_details import build_cleaned_csv_details
 from gt_v1_engine.core.errors import ConfigError, GTV1EngineError
 from gt_v1_engine.core.io_utils import ensure_file_exists, write_json
 from gt_v1_engine.core.paths import resolve_project_path
@@ -119,6 +120,34 @@ def clean_csv_command(
         table.add_row("removed invalid OHLC rows", str(summary["removed_invalid_ohlc_rows"]))
         table.add_row("output CSV", summary["output_path"])
         table.add_row("summary JSON", summary["summary_path"])
+        console.print(table)
+    except Exception as exc:
+        _handle_cli_error(exc, debug)
+
+
+@app.command("cleaned-csv-details")
+def cleaned_csv_details_command(
+    root_path: Path = typer.Option(..., "--root-path", help="Root directory for cleaned shared-storage CSV files."),
+    relative_path: Path = typer.Option(..., "--relative-path", help="Cleaned CSV path relative to root path."),
+    output_json: Path = typer.Option(..., "--output-json", help="Path for details JSON output."),
+    debug: bool = typer.Option(False, "--debug", help="Show traceback for errors."),
+) -> None:
+    """Analyze a cleaned shared-storage market CSV and write details JSON."""
+    try:
+        summary = build_cleaned_csv_details(root_path, relative_path, output_json)
+        table = Table(title="Cleaned CSV Details")
+        table.add_column("Field")
+        table.add_column("Value")
+        table.add_row("status", summary["status"])
+        table.add_row("row count", str(summary["row_count"]))
+        table.add_row("start DateTime", str(summary["start_datetime"]))
+        table.add_row("end DateTime", str(summary["end_datetime"]))
+        table.add_row("min OHLC price", str(summary["min_price_from_ohlc"]))
+        table.add_row("max OHLC price", str(summary["max_price_from_ohlc"]))
+        table.add_row("input CSV", summary["absolute_path"])
+        table.add_row("output JSON", summary["output_json"])
+        if summary["error_message"]:
+            table.add_row("error", summary["error_message"])
         console.print(table)
     except Exception as exc:
         _handle_cli_error(exc, debug)
