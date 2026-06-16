@@ -32,6 +32,10 @@ def test_validate_data_help_exits_zero() -> None:
     assert _run_cli("validate-data", "--help").returncode == 0
 
 
+def test_clean_csv_help_exits_zero() -> None:
+    assert _run_cli("clean-csv", "--help").returncode == 0
+
+
 def test_show_defaults_help_exits_zero() -> None:
     assert _run_cli("show-defaults", "--help").returncode == 0
 

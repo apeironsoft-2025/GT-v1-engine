@@ -16,6 +16,7 @@ from gt_v1_engine.backtesting.indicator_backtester import (
 from gt_v1_engine.core.errors import ConfigError, GTV1EngineError
 from gt_v1_engine.core.io_utils import ensure_file_exists, write_json
 from gt_v1_engine.core.paths import resolve_project_path
+from gt_v1_engine.data.raw_csv_cleaner import clean_raw_market_csv
 from gt_v1_engine.data.market_data_loader import load_market_data
 from gt_v1_engine.indicators.executor import run_indicator_executor
 from gt_v1_engine.indicators.registry import get_registered_indicators, validate_indicator_order
@@ -91,6 +92,33 @@ def validate_data(
         table.add_row("first DateTime", str(df["DateTime"].iloc[0]))
         table.add_row("last DateTime", str(df["DateTime"].iloc[-1]))
         table.add_row("columns", ", ".join(df.columns))
+        console.print(table)
+    except Exception as exc:
+        _handle_cli_error(exc, debug)
+
+
+@app.command("clean-csv")
+def clean_csv_command(
+    input_path: Path = typer.Option(..., "--input", help="Path to raw market CSV."),
+    output_path: Path = typer.Option(..., "--output", help="Path for cleaned CSV output."),
+    summary_path: Path = typer.Option(..., "--summary", help="Path for cleaning summary JSON."),
+    debug: bool = typer.Option(False, "--debug", help="Show traceback for errors."),
+) -> None:
+    """Clean and validate a raw shared-storage market CSV."""
+    try:
+        summary = clean_raw_market_csv(input_path, output_path, summary_path)
+        table = Table(title="CSV Cleaning")
+        table.add_column("Field")
+        table.add_column("Value")
+        table.add_row("status", summary["status"])
+        table.add_row("original rows", str(summary["original_row_count"]))
+        table.add_row("cleaned rows", str(summary["cleaned_row_count"]))
+        table.add_row("removed empty rows", str(summary["removed_empty_rows"]))
+        table.add_row("removed invalid DateTime rows", str(summary["removed_invalid_datetime_rows"]))
+        table.add_row("removed duplicate DateTime rows", str(summary["removed_duplicate_datetime_rows"]))
+        table.add_row("removed invalid OHLC rows", str(summary["removed_invalid_ohlc_rows"]))
+        table.add_row("output CSV", summary["output_path"])
+        table.add_row("summary JSON", summary["summary_path"])
         console.print(table)
     except Exception as exc:
         _handle_cli_error(exc, debug)
