@@ -8,6 +8,8 @@ import pandas as pd
 FAST_PERIOD = 12
 SLOW_PERIOD = 26
 SIGNAL_PERIOD = 9
+DEFAULT_CLEANED_ROOT_PATH = r"F:\GT-v1-shared-storage\cleaned"
+DEFAULT_OUTPUT_DIR = r"F:\GT-v1-shared-storage\indicators"
 
 
 def parse_args() -> argparse.Namespace:
@@ -15,19 +17,40 @@ def parse_args() -> argparse.Namespace:
         description="Generate MACD TD/TS CSV from a cleaned CSV file."
     )
 
-    parser.add_argument(
+    input_group = parser.add_mutually_exclusive_group(required=True)
+    input_group.add_argument(
+        "--file-name",
+        help="Cleaned CSV file name only. Example: USDJPY_M5_cleaned.csv",
+    )
+    input_group.add_argument(
         "--input-csv",
-        required=True,
         help="Absolute path to cleaned input CSV. Example: F:/GT-v1-shared-storage/cleaned/EURUSD_M5_cleaned.csv",
     )
 
     parser.add_argument(
+        "--cleaned-root-path",
+        default=DEFAULT_CLEANED_ROOT_PATH,
+        help="Directory containing cleaned CSV files.",
+    )
+
+    parser.add_argument(
         "--output-dir",
-        default=r"F:\GT-v1-shared-storage\indicators",
+        default=DEFAULT_OUTPUT_DIR,
         help="Output directory for MACD indicator CSV.",
     )
 
     return parser.parse_args()
+
+
+def validate_file_name(file_name: str) -> None:
+    invalid_tokens = ("..", "/", "\\")
+    if any(token in file_name for token in invalid_tokens):
+        raise ValueError(
+            "--file-name must be a file name only, not a path. "
+            "Rejecting values containing '..', '/', or '\\'."
+        )
+    if not file_name.strip():
+        raise ValueError("--file-name must not be empty.")
 
 
 def find_close_column(df: pd.DataFrame) -> str:
@@ -85,7 +108,15 @@ def calculate_macd_td_ts(df: pd.DataFrame) -> pd.DataFrame:
 def main() -> None:
     args = parse_args()
 
-    input_csv = Path(args.input_csv).to_absolute() if hasattr(Path(args.input_csv), "to_absolute") else Path(args.input_csv).absolute()
+    if args.file_name:
+        validate_file_name(args.file_name)
+        input_csv = Path(args.cleaned_root_path) / args.file_name
+    else:
+        input_csv = (
+            Path(args.input_csv).to_absolute()
+            if hasattr(Path(args.input_csv), "to_absolute")
+            else Path(args.input_csv).absolute()
+        )
     output_dir = Path(args.output_dir)
 
     if not input_csv.exists():

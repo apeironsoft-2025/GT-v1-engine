@@ -1,221 +1,199 @@
 {
-  "id": "6a32ad689f4305a87ab86200",
-  "ruleId": "GT_RULE_01_MACD_EMA_STACK_42_38_M5_V1",
-  "ruleName": "GT-RULE-01 MACD EMA_STACK 42/38 M5",
-  "fullRuleConditions": {
-    "ruleCode": "GT_RULE_01_MACD_EMA_STACK",
-    "version": "1.0.0",
-    "status": "RESEARCH_ONLY",
-    "productionStatus": "NOT_ACTIVE",
-    "description": "MACD and EMA_STACK agreement rule. Opens one order when MACD and EMA_STACK direction match and both strengths equal 1.0. Uses Close price as entry because indicators update on candle close. Manages one active order at a time using TP, SL, TD violation, MACD strength violation, and EMA strength violation.",
-    "input": {
-      "sourceType": "CSV",
-      "requiredColumns": [
-        "DateTime",
-        "Open",
-        "High",
-        "Low",
-        "Close",
-        "MACD_TD",
-        "MACD_TS",
-        "EMA_STACK_TD",
-        "EMA_STACK_TS"
-      ],
-      "datetimeColumn": "DateTime",
-      "ohlcColumns": {
-        "open": "Open",
-        "high": "High",
-        "low": "Low",
-        "close": "Close"
-      },
-      "indicatorColumns": {
-        "macdDirection": "MACD_TD",
-        "macdStrength": "MACD_TS",
-        "emaStackDirection": "EMA_STACK_TD",
-        "emaStackStrength": "EMA_STACK_TS"
-      }
-    },
-    "parameters": {
-      "tpPip": 42,
-      "slPip": 38,
-      "timeframe": "M5",
-      "entryPriceSource": "Close",
-      "maxOpenOrders": 1,
-      "maxHoldingCandles": null,
-      "sameCandleTpSlCollectedPips": 0
-    },
-    "pipConfig": {
-      "pipSizeMode": "AUTO_BY_PAIR",
-      "jpyPairPipSize": 0.01,
-      "nonJpyPairPipSize": 1.0e-4,
-      "pipToPriceFormula": "pip_value * pip_size"
-    },
-    "normalization": {
-      "directionValues": ["UP", "DOWN", "NO_SIGNAL"],
-      "directionNormalization": "strip_spaces_and_uppercase",
-      "strengthNormalization": "float"
-    },
-    "entryLogic": {
-      "manageOrderFromNextRow": true,
-      "conditions": [
-        {
-          "name": "direction_agreement",
-          "condition": "MACD_TD == EMA_STACK_TD"
+    "isSuccess": true,
+    "statusCode": 200,
+    "statusMessage": "rule summary found",
+    "data": {
+        "id": "6a33bac3c529947a13d5a16c",
+        "ruleId": "GT_RULE_02_MACD_EMA_FULL_TREND_30_40_M5_V1",
+        "ruleName": "GT-RULE-02 MACD EMA_STACK Full Trend 30/40 M5",
+        "inputTradesPath": "F:\\GT-v1-shared-storage\\rule-output\\GT_RULE_02_MACD_EMA_FULL_TREND_30_40_M5_V1_trades.csv",
+        "summaryJsonPath": "F:\\GT-v1-shared-storage\\rule-output\\GT_RULE_02_MACD_EMA_FULL_TREND_30_40_M5_V1_summary.json",
+        "summaryData": {
+            "ruleId": "GT_RULE_02_MACD_EMA_FULL_TREND_30_40_M5_V1",
+            "ruleName": "GT-RULE-02 MACD EMA_STACK Full Trend 30/40 M5",
+            "inputTradesPath": "F:\\GT-v1-shared-storage\\rule-output\\GT_RULE_02_MACD_EMA_FULL_TREND_30_40_M5_V1_trades.csv",
+            "generatedAt": "2026-06-18T09:30:43.408187+00:00",
+            "totalTrades": 569,
+            "netPips": 151.3,
+            "averagePipsPerTrade": 0.266,
+            "closeStatusSummary": {
+                "VIOLATE_MACD_TS_WIN": {
+                    "orderCount": 161,
+                    "totalPips": 1013.4,
+                    "averagePips": 6.294
+                },
+                "VIOLATE_MACD_TS_LOSS": {
+                    "orderCount": 328,
+                    "totalPips": -2101.1,
+                    "averagePips": -6.406
+                },
+                "HIT_TP_WIN": {
+                    "orderCount": 60,
+                    "totalPips": 1800.0,
+                    "averagePips": 30.0
+                },
+                "HIT_SL_LOSS": {
+                    "orderCount": 12,
+                    "totalPips": -480.0,
+                    "averagePips": -40.0
+                },
+                "VIOLATE_TD_LOSS": {
+                    "orderCount": 5,
+                    "totalPips": -68.5,
+                    "averagePips": -13.7
+                },
+                "VIOLATE_EMA_TS_LOSS": {
+                    "orderCount": 3,
+                    "totalPips": -12.5,
+                    "averagePips": -4.167
+                }
+            },
+            "directionSummary": {
+                "UP": {
+                    "orderCount": 292,
+                    "totalPips": -145.6,
+                    "averagePips": -0.499
+                },
+                "DOWN": {
+                    "orderCount": 277,
+                    "totalPips": 296.9,
+                    "averagePips": 1.072
+                }
+            },
+            "winLossSummary": {
+                "winOrders": {
+                    "orderCount": 221,
+                    "totalPips": 2813.4,
+                    "averagePips": 12.73
+                },
+                "lossOrders": {
+                    "orderCount": 344,
+                    "totalPips": -2662.1,
+                    "averagePips": -7.739
+                },
+                "zeroOrders": {
+                    "orderCount": 4,
+                    "totalPips": 0.0,
+                    "averagePips": 0.0
+                },
+                "winRatePercent": 38.84,
+                "lossRatePercent": 60.457
+            },
+            "dayQuarterSummary": {
+                "Q1_00_00_to_05_59": {
+                    "orderCount": 145,
+                    "totalPips": 97.0,
+                    "averagePips": 0.669
+                },
+                "Q2_06_00_to_11_59": {
+                    "orderCount": 147,
+                    "totalPips": 352.2,
+                    "averagePips": 2.396
+                },
+                "Q3_12_00_to_17_59": {
+                    "orderCount": 200,
+                    "totalPips": -128.2,
+                    "averagePips": -0.641
+                },
+                "Q4_18_00_to_23_59": {
+                    "orderCount": 77,
+                    "totalPips": -169.7,
+                    "averagePips": -2.204
+                },
+                "mostProfitableQuarter": "Q2_06_00_to_11_59",
+                "mostLossQuarter": "Q4_18_00_to_23_59"
+            },
+            "weekdaySummary": {
+                "Monday": {
+                    "orderCount": 100,
+                    "totalPips": -83.2,
+                    "averagePips": -0.832
+                },
+                "Tuesday": {
+                    "orderCount": 112,
+                    "totalPips": 97.1,
+                    "averagePips": 0.867
+                },
+                "Wednesday": {
+                    "orderCount": 115,
+                    "totalPips": -304.3,
+                    "averagePips": -2.646
+                },
+                "Thursday": {
+                    "orderCount": 111,
+                    "totalPips": 300.1,
+                    "averagePips": 2.704
+                },
+                "Friday": {
+                    "orderCount": 98,
+                    "totalPips": 127.3,
+                    "averagePips": 1.299
+                },
+                "Saturday": {
+                    "orderCount": 0,
+                    "totalPips": 0.0,
+                    "averagePips": 0.0
+                },
+                "Sunday": {
+                    "orderCount": 33,
+                    "totalPips": 14.3,
+                    "averagePips": 0.433
+                }
+            },
+            "bestWorstWeekday": {
+                "mostProfitableDay": "Thursday",
+                "mostProfitableDayPips": 300.1,
+                "mostLossDay": "Wednesday",
+                "mostLossDayPips": -304.3
+            },
+            "directionProfitLossSummary": {
+                "UP_PROFIT": {
+                    "orderCount": 119,
+                    "totalPips": 1127.1
+                },
+                "UP_LOSS": {
+                    "orderCount": 170,
+                    "totalPips": -1272.7
+                },
+                "DOWN_PROFIT": {
+                    "orderCount": 102,
+                    "totalPips": 1686.3
+                },
+                "DOWN_LOSS": {
+                    "orderCount": 174,
+                    "totalPips": -1389.4
+                }
+            },
+            "holdingCandleSummary": {
+                "averageCc": 3.29,
+                "minCc": 0,
+                "maxCc": 16,
+                "winningAverageCc": 4.995,
+                "losingAverageCc": 2.195
+            },
+            "futureMlDlFeatureSuggestions": [
+                "Add rolling last N trade win/loss streak features.",
+                "Add hour-of-day and quarter-of-day features.",
+                "Add weekday performance features.",
+                "Add direction-specific performance features: UP win rate, DOWN win rate, UP net pips, DOWN net pips.",
+                "Add close_status distribution as rule behavior features.",
+                "Add holding candle count cc as an exit timing feature.",
+                "Add market session labels: Asia, London, New York, Overlap.",
+                "Add volatility features from candle range: High-Low and ATR if available.",
+                "Add drawdown and consecutive loss features.",
+                "Add risk-reward features: tpPip, slPip, tp/sl ratio.",
+                "Add previous trade outcome feature.",
+                "Add previous trade collected_pips feature.",
+                "Add cumulative daily pips before entry.",
+                "Add daily trade count before entry.",
+                "Add per-rule comparison features across multiple TP/SL versions.",
+                "For DL models, export sequence windows before each entry using OHLC and indicator columns.",
+                "For classification, label future trade result as WIN, LOSS, ZERO.",
+                "For regression, label future collected_pips.",
+                "For ranking, compare multiple rule versions and rank best expected net pips."
+            ]
         },
-        {
-          "name": "macd_strength_full",
-          "condition": "MACD_TS <= 1.0 && MACD_TS >= 0.0"
-        },
-        {
-          "name": "ema_stack_strength_full",
-          "condition": "EMA_STACK_TS <= 1.0 && EMA_STACK_TS >= 0.0"
-        },
-        {
-          "name": "no_signal_block",
-          "condition": "MACD_TD != NO_SIGNAL AND EMA_STACK_TD != NO_SIGNAL"
-        }
-      ],
-      "sideMapping": {
-        "UP": "UP",
-        "DOWN": "DOWN"
-      },
-      "skipConditions": [
-        {
-          "name": "no_signal",
-          "condition": "MACD_TD == NO_SIGNAL OR EMA_STACK_TD == NO_SIGNAL",
-          "action": "SKIP"
-        },
-        {
-          "name": "direction_not_equal",
-          "condition": "MACD_TD != EMA_STACK_TD",
-          "action": "SKIP"
-        }
-      ]
-    },
-    "priceLevelLogic": {
-      "upOrder": {
-        "tpPrice": "entry_price + tp_pip * pip_size",
-        "slPrice": "entry_price - sl_pip * pip_size"
-      },
-      "downOrder": {
-        "tpPrice": "entry_price - tp_pip * pip_size",
-        "slPrice": "entry_price + sl_pip * pip_size"
-      }
-    },
-    "executionLogic": {
-      "sameEntryCandleExecution": false,
-      "manageOrderFromNextRow": true,
-      "priority": [
-        {
-          "order": 1,
-          "name": "same_candle_tp_sl"
-        },
-        {
-          "order": 2,
-          "name": "take_profit"
-        },
-        {
-          "order": 3,
-          "name": "stop_loss"
-        },
-        {
-          "order": 4,
-          "name": "td_violation"
-        },
-        {
-          "order": 5,
-          "name": "macd_ts_violation"
-        },
-        {
-          "order": 6,
-          "name": "ema_stack_ts_violation"
-        },
-        {
-          "order": 7,
-          "name": "continue_order"
-        }
-      ]
-    },
-    "tpSlLogic": {
-      "upOrder": {
-        "tpHitCondition": "High >= tp_price",
-        "slHitCondition": "Low <= sl_price"
-      },
-      "downOrder": {
-        "tpHitCondition": "Low <= tp_price",
-        "slHitCondition": "High >= sl_price"
-      },
-      "sameCandleTpSl": {
-        "condition": "tp_hit == true AND sl_hit == true",
-        "closeStatus": "HIT_TP_SL_IN_SAME_CANDLE",
-        "activeOrder": false,
-        "collectedPips": 0
-      },
-      "normalTakeProfit": {
-        "closeStatus": "HIT_TP_WIN",
-        "activeOrder": false,
-        "collectedPipsFormula": "+tp_pip"
-      },
-      "normalStopLoss": {
-        "closeStatus": "HIT_SL_LOSS",
-        "activeOrder": false,
-        "collectedPipsFormula": "-sl_pip"
-      }
-    },
-    "violationLogic": {
-      "tdViolation": {
-        "condition": "MACD_TD != EMA_STACK_TD",
-        "closePriceSource": "Close",
-        "upOrderPipsFormula": "(Close - entry_price) / pip_size",
-        "downOrderPipsFormula": "(entry_price - Close) / pip_size",
-        "winStatus": "VIOLATE_TD_WIN",
-        "lossStatus": "VIOLATE_TD_LOSS",
-        "winCondition": "collected_pips > 0",
-        "lossCondition": "collected_pips <= 0"
-      }
-    },
-    "endOfFileLogic": {
-      "description": "If CSV ends while an order is still active, close at final row Close.",
-      "closePriceSource": "Close",
-      "winStatus": "FORCE_CLOSE_AT_END_WIN",
-      "lossStatus": "FORCE_CLOSE_AT_END_LOSS"
-    },
-    "output": {
-      "tradeCsvColumns": [
-        "rule_name",
-        "pair",
-        "timeframe",
-        "order_id",
-        "direction",
-        "entry_datetime",
-        "entry_index",
-        "entry_price",
-        "tp_pip",
-        "sl_pip",
-        "tp_price",
-        "sl_price",
-        "close_datetime",
-        "close_index",
-        "close_price",
-        "close_status",
-        "collected_pips",
-        "cc",
-        "entry_macd_td",
-        "entry_macd_ts",
-        "entry_ema_stack_td",
-        "entry_ema_stack_ts",
-        "close_macd_td",
-        "close_macd_ts",
-        "close_ema_stack_td",
-        "close_ema_stack_ts"
-      ]
-    },
-    "safety": {
-      "brokerOrdersAllowed": false,
-      "liveTradingAllowed": false,
-      "researchOnly": true
+        "createdAt": "2026-06-18T09:30:43.428Z",
+        "updatedAt": "2026-06-18T09:30:43.428Z"
     }
-  },
-  "createdAt": "2026-06-17T14:21:28.399Z",
-  "updatedAt": "2026-06-17T14:21:28.399Z"
 }
