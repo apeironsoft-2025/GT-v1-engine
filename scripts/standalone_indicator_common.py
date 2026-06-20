@@ -14,9 +14,23 @@ TS_VALUES = {0.0, 0.25, 0.5, 0.75, 1.0}
 def parse_file_name_args(description: str) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=description)
     parser.add_argument(
+        "--file-name",
         "--fileName",
+        dest="fileName",
         required=True,
         help="Cleaned CSV file name only. Example: USDJPY_M5_cleaned.csv",
+    )
+    parser.add_argument(
+        "--cleaned-root-path",
+        dest="cleanedRootPath",
+        default=DEFAULT_CLEANED_ROOT_PATH,
+        help="Directory containing cleaned CSV files.",
+    )
+    parser.add_argument(
+        "--output-dir",
+        dest="outputDir",
+        default=DEFAULT_OUTPUT_DIR,
+        help="Output directory for indicator CSV.",
     )
     return parser.parse_args()
 
@@ -25,19 +39,23 @@ def validate_file_name(file_name: str) -> None:
     invalid_tokens = ("..", "/", "\\")
     if any(token in file_name for token in invalid_tokens):
         raise ValueError(
-            "--fileName must be a file name only, not a path. "
+            "--file-name must be a file name only, not a path. "
             "Rejecting values containing '..', '/', or '\\'."
         )
     if not file_name.strip():
-        raise ValueError("--fileName must not be empty.")
+        raise ValueError("--file-name must not be empty.")
 
 
-def input_csv_path(file_name: str) -> Path:
+def input_csv_path(file_name: str, cleaned_root_path: str = DEFAULT_CLEANED_ROOT_PATH) -> Path:
     validate_file_name(file_name)
-    return Path(DEFAULT_CLEANED_ROOT_PATH) / file_name
+    return Path(cleaned_root_path) / file_name
 
 
-def output_csv_path(file_name: str, indicator_name: str) -> Path:
+def output_csv_path(
+    file_name: str,
+    indicator_name: str,
+    output_dir: str = DEFAULT_OUTPUT_DIR,
+) -> Path:
     validate_file_name(file_name)
     if file_name.endswith("_cleaned.csv"):
         output_file_name = file_name.replace(
@@ -45,7 +63,7 @@ def output_csv_path(file_name: str, indicator_name: str) -> Path:
         )
     else:
         output_file_name = f"{Path(file_name).stem}_{indicator_name}_td_ts.csv"
-    return Path(DEFAULT_OUTPUT_DIR) / output_file_name
+    return Path(output_dir) / output_file_name
 
 
 def validate_required_columns(df: pd.DataFrame) -> None:
@@ -60,8 +78,11 @@ def validate_required_columns(df: pd.DataFrame) -> None:
         )
 
 
-def load_cleaned_csv(file_name: str) -> tuple[Path, pd.DataFrame]:
-    input_csv = input_csv_path(file_name)
+def load_cleaned_csv(
+    file_name: str,
+    cleaned_root_path: str = DEFAULT_CLEANED_ROOT_PATH,
+) -> tuple[Path, pd.DataFrame]:
+    input_csv = input_csv_path(file_name, cleaned_root_path)
     if not input_csv.exists():
         raise FileNotFoundError(f"Input CSV not found: {input_csv}")
 
@@ -116,30 +137,17 @@ def rolling_quantile_strength(
     signal_mask: pd.Series,
     window: int = 100,
 ) -> pd.Series:
-    strengths = []
-    valid_values = values.dropna()
-    for index, value in values.items():
-        if (
-            pd.isna(value)
-            or not bool(signal_mask.loc[index])
-            or valid_values.loc[:index].empty
-        ):
-            strengths.append(0.0)
-            continue
+    q40 = values.rolling(window=window, min_periods=1).quantile(0.40)
+    q60 = values.rolling(window=window, min_periods=1).quantile(0.60)
+    q80 = values.rolling(window=window, min_periods=1).quantile(0.80)
 
-        history = valid_values.loc[:index].tail(window)
-        q40 = history.quantile(0.40)
-        q60 = history.quantile(0.60)
-        q80 = history.quantile(0.80)
-        if value <= q40:
-            strengths.append(0.25)
-        elif value <= q60:
-            strengths.append(0.5)
-        elif value <= q80:
-            strengths.append(0.75)
-        else:
-            strengths.append(1.0)
-    return pd.Series(strengths, index=values.index, dtype=float)
+    strengths = pd.Series(0.0, index=values.index, dtype=float)
+    valid_signal = values.notna() & signal_mask.fillna(False)
+    strengths.loc[valid_signal] = 1.0
+    strengths.loc[valid_signal & (values <= q80)] = 0.75
+    strengths.loc[valid_signal & (values <= q60)] = 0.5
+    strengths.loc[valid_signal & (values <= q40)] = 0.25
+    return strengths
 
 
 def write_indicator_csv(
@@ -148,8 +156,9 @@ def write_indicator_csv(
     indicator_name: str,
     td_column: str,
     ts_column: str,
+    output_dir: str = DEFAULT_OUTPUT_DIR,
 ) -> Path:
-    output_csv = output_csv_path(file_name, indicator_name)
+    output_csv = output_csv_path(file_name, indicator_name, output_dir)
     output_csv.parent.mkdir(parents=True, exist_ok=True)
 
     invalid_td = set(result[td_column].dropna().unique()) - TD_VALUES

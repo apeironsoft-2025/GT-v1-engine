@@ -9,12 +9,69 @@ DEFAULT_EXPERIMENTS_ROOT = r"F:\GT-v1-shared-storage\experiments"
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description="Merge two indicator TD/TS CSV files.")
-    parser.add_argument("--first-file", required=True)
-    parser.add_argument("--second-file", required=True)
-    parser.add_argument("--indicators-root", default=DEFAULT_INDICATORS_ROOT)
-    parser.add_argument("--experiments-root", default=DEFAULT_EXPERIMENTS_ROOT)
-    return parser.parse_args()
+    parser = argparse.ArgumentParser(description="Merge indicator TD/TS CSV files.")
+    parser.add_argument(
+        "--file-names",
+        help=(
+            "Comma-separated indicator CSV file names to merge, in output column order. "
+            "Example: USDJPY_M5_adx_td_ts.csv, USDJPY_M5_atr_td_ts.csv"
+        ),
+    )
+    parser.add_argument(
+        "--input-files",
+        nargs="+",
+        help="Deprecated. Use --file-names instead.",
+    )
+    parser.add_argument("--first-file", help="Deprecated. Use --file-names instead.")
+    parser.add_argument("--second-file", help="Deprecated. Use --file-names instead.")
+    parser.add_argument(
+        "--indicators-root-path",
+        default=DEFAULT_INDICATORS_ROOT,
+        help="Directory containing indicator CSV files.",
+    )
+    parser.add_argument(
+        "--output-dir",
+        default=DEFAULT_EXPERIMENTS_ROOT,
+        help="Output directory for merged indicator CSV.",
+    )
+    parser.add_argument(
+        "--indicators-root",
+        dest="indicators_root_path",
+        help="Deprecated. Use --indicators-root-path instead.",
+    )
+    parser.add_argument(
+        "--experiments-root",
+        dest="output_dir",
+        help="Deprecated. Use --output-dir instead.",
+    )
+    args = parser.parse_args()
+
+    if args.file_names:
+        if args.input_files or args.first_file or args.second_file:
+            parser.error("--file-names cannot be combined with deprecated file arguments.")
+        args.input_files = parse_file_names(args.file_names)
+        if len(args.input_files) < 2:
+            parser.error("--file-names requires at least two CSV files.")
+        return args
+
+    if args.input_files:
+        if args.first_file or args.second_file:
+            parser.error("--input-files cannot be combined with --first-file or --second-file.")
+        if len(args.input_files) < 2:
+            parser.error("--input-files requires at least two CSV files.")
+        return args
+
+    if bool(args.first_file) != bool(args.second_file):
+        parser.error("--first-file and --second-file must be provided together.")
+    if not args.first_file:
+        parser.error("--file-names is required.")
+
+    args.input_files = [args.first_file, args.second_file]
+    return args
+
+
+def parse_file_names(value):
+    return [file_name.strip() for file_name in value.split(",") if file_name.strip()]
 
 
 def validate_relative_csv_path(value, label):
@@ -74,19 +131,48 @@ def validate_base_columns_match(first_rows, second_rows):
                 raise ValueError("Input CSV base columns do not match.")
 
 
-def write_output(output_path, first_rows, second_rows, first_td, first_ts, second_td, second_ts):
-    output_columns = BASE_COLUMNS + [first_td, first_ts, second_td, second_ts]
+def validate_all_base_columns_match(csv_items):
+    first_item = csv_items[0]
+
+    for item in csv_items[1:]:
+        try:
+            validate_base_columns_match(first_item["rows"], item["rows"])
+        except ValueError as exc:
+            raise ValueError(
+                f"Input CSV base columns do not match: {first_item['path']} and {item['path']}"
+            ) from exc
+
+
+def validate_unique_indicator_columns(csv_items):
+    seen = {}
+
+    for item in csv_items:
+        for column in item["indicator_columns"]:
+            if column in seen:
+                raise ValueError(
+                    f"Duplicate indicator column '{column}' found in {seen[column]} and {item['path']}."
+                )
+            seen[column] = item["path"]
+
+
+def write_output(output_path, csv_items):
+    output_columns = BASE_COLUMNS + [
+        column for item in csv_items for column in item["indicator_columns"]
+    ]
+    first_rows = csv_items[0]["rows"]
 
     with output_path.open("w", newline="", encoding="utf-8") as handle:
         writer = csv.DictWriter(handle, fieldnames=output_columns)
         writer.writeheader()
 
-        for first_row, second_row in zip(first_rows, second_rows):
+        for row_index, first_row in enumerate(first_rows):
             output_row = {column: first_row[column] for column in BASE_COLUMNS}
-            output_row[first_td] = first_row[first_td]
-            output_row[first_ts] = first_row[first_ts]
-            output_row[second_td] = second_row[second_td]
-            output_row[second_ts] = second_row[second_ts]
+
+            for item in csv_items:
+                item_row = item["rows"][row_index]
+                for column in item["indicator_columns"]:
+                    output_row[column] = item_row[column]
+
             writer.writerow(output_row)
 
     return output_columns
@@ -95,31 +181,39 @@ def write_output(output_path, first_rows, second_rows, first_td, first_ts, secon
 def main():
     args = parse_args()
 
-    indicators_root = Path(args.indicators_root).expanduser().resolve()
-    experiments_root = Path(args.experiments_root).expanduser().resolve()
-    first_relative = validate_relative_csv_path(args.first_file, "--first-file")
-    second_relative = validate_relative_csv_path(args.second_file, "--second-file")
+    indicators_root = Path(args.indicators_root_path).expanduser().resolve()
+    output_dir = Path(args.output_dir).expanduser().resolve()
+    relative_paths = [
+        validate_relative_csv_path(file_name, f"--file-names[{index}]")
+        for index, file_name in enumerate(args.input_files, start=1)
+    ]
 
-    first_csv = indicators_root / first_relative
-    second_csv = indicators_root / second_relative
+    csv_items = []
+    for relative_path in relative_paths:
+        csv_path = indicators_root / relative_path
+        fieldnames, rows = read_csv(csv_path)
+        td_column, ts_column = find_td_ts_columns(fieldnames, str(csv_path))
+        csv_items.append(
+            {
+                "path": csv_path,
+                "rows": rows,
+                "indicator_columns": [td_column, ts_column],
+            }
+        )
 
-    first_fieldnames, first_rows = read_csv(first_csv)
-    second_fieldnames, second_rows = read_csv(second_csv)
+    validate_all_base_columns_match(csv_items)
+    validate_unique_indicator_columns(csv_items)
 
-    validate_base_columns_match(first_rows, second_rows)
-
-    first_td, first_ts = find_td_ts_columns(first_fieldnames, "First CSV")
-    second_td, second_ts = find_td_ts_columns(second_fieldnames, "Second CSV")
-
-    output_name = f"{first_csv.stem}_{second_csv.stem}.csv"
-    output_csv = experiments_root / output_name
-    output_columns = write_output(output_csv, first_rows, second_rows, first_td, first_ts, second_td, second_ts)
+    output_name = f"{'_'.join(item['path'].stem for item in csv_items)}.csv"
+    output_dir.mkdir(parents=True, exist_ok=True)
+    output_csv = output_dir / output_name
+    output_columns = write_output(output_csv, csv_items)
 
     print("Indicator TD/TS merge completed.")
-    print(f"First CSV : {first_csv}")
-    print(f"Second CSV: {second_csv}")
+    for index, item in enumerate(csv_items, start=1):
+        print(f"Input CSV {index}: {item['path']}")
     print(f"Output CSV: {output_csv}")
-    print(f"Rows      : {len(first_rows)}")
+    print(f"Rows      : {len(csv_items[0]['rows'])}")
     print(f"Columns   : {', '.join(output_columns)}")
 
 

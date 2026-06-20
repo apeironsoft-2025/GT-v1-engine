@@ -35,7 +35,6 @@ def parse_args() -> argparse.Namespace:
 
     return parser.parse_args()
 
-
 def validate_file_name(file_name: str) -> None:
     invalid_tokens = ("..", "/", "\\")
     if any(token in file_name for token in invalid_tokens):

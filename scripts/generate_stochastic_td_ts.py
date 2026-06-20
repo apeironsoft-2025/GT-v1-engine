@@ -71,9 +71,11 @@ def calculate_stochastic_td_ts(df: pd.DataFrame) -> pd.DataFrame:
 
 def main() -> None:
     args = parse_file_name_args("Generate Stochastic TD/TS CSV from a cleaned CSV file.")
-    input_csv, df = load_cleaned_csv(args.fileName)
+    input_csv, df = load_cleaned_csv(args.fileName, args.cleanedRootPath)
     result = calculate_stochastic_td_ts(df)
-    output_csv = write_indicator_csv(result, args.fileName, INDICATOR_NAME, TD_COLUMN, TS_COLUMN)
+    output_csv = write_indicator_csv(
+        result, args.fileName, INDICATOR_NAME, TD_COLUMN, TS_COLUMN, args.outputDir
+    )
     print_success(input_csv, output_csv, result, TD_COLUMN, TS_COLUMN)
 
 
